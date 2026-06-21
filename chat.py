@@ -28,6 +28,11 @@ For donor detail questions (e.g. "who are the biggest individual donors?", "show
 For employer name searches (e.g. "show all Raytheon contributions"):
 - Use get_contributions with the employer parameter.
 
+For PAC contribution questions (e.g. "what PACs gave to this candidate?", "how much PAC money from defense?"):
+- Use get_pac_contributions ONCE to get all PACs aggregated by name.
+- Identify industry-affiliated PACs from their names (e.g. "Raytheon PAC", "National Association of Realtors PAC", "EMILY's List").
+- Do NOT call get_contributions separately for each PAC.
+
 ## Content guidelines
 - When interpreting an industry, identify relevant employer names from the get_employer_breakdown results. For example, "defense" maps to employers like Raytheon, Lockheed Martin, General Dynamics, Northrop Grumman, Boeing, L3Harris, BAE Systems, SAIC, General Atomics, Leidos, etc.
 - Cite specific employers, amounts, and donor counts — not just totals.
@@ -79,6 +84,19 @@ TOOLS = [
         },
     },
     {
+        "name": "get_pac_contributions",
+        "description": "Get all PAC contributions to a candidate, aggregated by PAC name and sorted by total. Use this for any question about PAC money, corporate PACs, industry PACs, or the split between PAC and individual donors.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "committee_id": {"type": "string", "description": "FEC committee ID"},
+                "cycle": {"type": "integer", "description": "Election cycle year"},
+                "limit": {"type": "integer", "description": "Max PAC contributions to fetch before aggregating (default 100)"},
+            },
+            "required": ["committee_id", "cycle"],
+        },
+    },
+    {
         "name": "get_large_contributions",
         "description": "Get contributions above a dollar threshold, sorted by amount descending. Useful for finding major donors or near-limit contributions.",
         "input_schema": {
@@ -101,6 +119,8 @@ def dispatch(tool_name: str, tool_input: dict):
         return fec.get_employer_breakdown(**tool_input)
     elif tool_name == "get_contributions":
         return fec.get_contributions(**tool_input)
+    elif tool_name == "get_pac_contributions":
+        return fec.get_pac_contributions(**tool_input)
     elif tool_name == "get_large_contributions":
         return fec.get_large_contributions(**tool_input)
     else:

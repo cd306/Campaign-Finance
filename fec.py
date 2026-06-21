@@ -96,3 +96,35 @@ def get_contributions(
 
 def get_large_contributions(committee_id: str, cycle: int, threshold: float = 5000) -> list[dict]:
     return get_contributions(committee_id, cycle, min_amount=threshold)
+
+
+def get_pac_contributions(committee_id: str, cycle: int, limit: int = 100) -> list[dict]:
+    """Get PAC contributions aggregated by contributor name (top 100 by amount)."""
+    params = {
+        "committee_id": committee_id,
+        "two_year_transaction_period": cycle,
+        "entity_type": "PAC",
+        "per_page": min(limit, 100),  # FEC API hard cap
+        "sort": "-contribution_receipt_amount",
+    }
+    data = _get("/schedules/schedule_a/", params)
+    if "error" in data:
+        return data
+
+    # Aggregate by PAC name so Claude gets a clean summary
+    totals: dict = {}
+    for r in data.get("results", []):
+        name = r.get("contributor_name") or "Unknown PAC"
+        amount = r.get("contribution_receipt_amount") or 0
+        if name not in totals:
+            totals[name] = {
+                "pac_name": name,
+                "contributor_committee_id": r.get("contributor_committee_id"),
+                "total": 0,
+                "count": 0,
+                "most_recent_date": r.get("contribution_receipt_date"),
+            }
+        totals[name]["total"] += amount
+        totals[name]["count"] += 1
+
+    return sorted(totals.values(), key=lambda x: x["total"], reverse=True)
